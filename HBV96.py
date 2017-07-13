@@ -440,7 +440,7 @@ def simulate(avg_prec, temp, et, par, p2, init_st=DEF_ST, ll_temp=None,
 
     q_sim = [q_0, ]
 
-    for i in xrange(len(avg_prec)):
+    for i in range(len(avg_prec)):
         v = [avg_prec[i], temp[i], et[i], ll_temp[i]]
         q_out, st_out = _step_run(par, p2, v, st[i])
         q_sim.append(q_out)
