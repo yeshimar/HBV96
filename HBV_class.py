@@ -91,6 +91,10 @@ class HBV96(object):
 	def __init__(self):
 		self._par = dict(zip(self._ind, len(self._ind)*[0.0]))
 
+	@property
+	def par(self):
+		return self._par
+
 	# Render parameter function
 	def render_par(self, obj_name, par_name):
 		return	eval('self.'+obj_name+'[par_name]')
