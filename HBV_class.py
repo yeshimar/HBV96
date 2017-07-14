@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 # HBV-96 model class
 
-from pandas import Series, DataFrame
-import pandas as pd
 
 class HBV96(object):
 	"""docstring for HBV96"""
@@ -75,32 +73,28 @@ class HBV96(object):
 	        1.4]		#sfcf
 
 	# Initial status
-	DEF_ST = Series([0.0,		#sp: Snow pack
-					30.0, 		#sm: Soil moisture
-					30.0, 		#uz: Upper zone direct runoff
-					30.0, 		#lz: Lower zone direct runoff
-					0.0],		#wc: Water content
-					index = ['sp',
-							'sm',
-							'uz',
-							'lz',
-							'wc'])
-
+	DEF_ST = {	'sp': 0.0,	#sp: Snow pack
+				'sm': 30.0,	#sm: Soil moisture
+				'uz': 30.0,	#uz: Upper zone direct runoff
+				'lz': 30.0,	#lz: Lower zone direct runoff
+				'wc': 0.0	#wc: Water content
+				}		
+					
 	# Boundary conditions DataFrame
-	BOUND = DataFrame({"P_LB": P_LB, "P_UB": P_UB}, 
-		index = _ind[:18])
+	BOUND = {"low": dict(zip(_ind[:18], P_LB)),
+				"up": dict(zip(_ind[:18], P_UB))}
 
 	# Initial flow rate		
 	DEF_q0 = 10.0
 
 	# HBV96 model initializer, only parameter enough?
 	def __init__(self):
-		self._par = Series(len(self._ind)*[0.0], index = self._ind)
+		self._par = dict(zip(self._ind, len(self._ind)*[0.0]))
 
-	# Render parameter fuction
+	# Render parameter function
 	def render_par(self, obj_name, par_name):
 		return	eval('self.'+obj_name+'[par_name]')
 
-	# Set parameter function
+	# Set parameter function, external accessibility for Django
 	def set_par(self, obj_name, par_name, value):
 		exec('self.'+obj_name+'[par_name] = value')
