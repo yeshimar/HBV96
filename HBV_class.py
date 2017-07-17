@@ -87,7 +87,7 @@ class HBV96(object):
 	# Initial flow rate		
 	DEF_q0 = 10.0
 
-	# HBV96 model initializer, only parameter enough?
+	# HBV96 model initializer, only Mparameter enough?
 	def __init__(self):
 		self._par = dict(zip(self._ind, len(self._ind)*[0.0]))
 
@@ -102,3 +102,27 @@ class HBV96(object):
 	# Set parameter function, external accessibility for Django
 	def set_par(self, obj_name, par_name, value):
 		exec('self.'+obj_name+'[par_name] = value')
+
+# Test how private statement works in nested functions
+x = {'a':1, 'b':2}
+def wraper(x):
+	x['c'] = 3
+	_bc = x['b']*x['c']
+	def _body():
+		x['d'] = 4
+		x['bcd'] = _bc*x['d']
+		def _guts():
+			x['e'] = 5
+			x['bce'] = _bc*x['e']
+			return x
+		return _guts
+	return _body
+
+'''
+Test result is all a big BRAVOS !
+In [8]: wr = wraper(x)
+
+In [9]: wr()()
+Out[9]: {'a': 1, 'b': 2, 'bcd': 24, 'bce': 30, 'c': 3, 'd': 4, 'e': 5}
+
+'''

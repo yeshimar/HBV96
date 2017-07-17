@@ -7,7 +7,8 @@ class RoutineProcess(object):
 
 	""""""
 	
-	def _precipitation(par, intab):
+	# Precipitation routine HBV96
+	def _precipitation():
 	    '''
 	    ==============
 	    Precipitation
@@ -55,206 +56,220 @@ class RoutineProcess(object):
 	        _rf = ((intab['temp']-par['ltt'])/(par['utt']-par['ltt'])) * prec * par['rfcf']
 	        _sf = (1.0-((intab['temp']-par['ltt'])/(par['utt']-par['ltt']))) * prec * par['sfcf']
 
-	    return _rf, _sf
+	    # return _snow at line 266
+		
+		# Snow routine HBV96	        
+		def _snow():
+		    '''
+		    ====
+		    Snow
+		    ====
+		    
+		    Snow routine of the HBV-96 model.
+		    
+		    The snow pack consists of two states: Water Content (wc) and Snow Pack 
+		    (sp). The first corresponds to the liquid part of the water in the snow,
+		    while the latter corresponds to the solid part. If the temperature is 
+		    higher than the melting point, the snow pack will melt and the solid snow
+		    will become liquid. In the opposite case, the liquid part of the snow will
+		    refreeze, and turn into solid. The water that cannot be stored by the solid
+		    part of the snow pack will drain into the soil as part of infiltration.
+
+		    Parameters
+		    ----------
+		    par['cfmax'] : float 
+		        Day degree factor
+		    par['tfac'] : float
+		        Temperature correction factor
+		    intab['temp'] : float 
+		        Temperature [C]
+		    par['ttm'] : float 
+		        Temperature treshold for Melting [C]
+		    par['cfr'] : float 
+		        Refreezing factor
+		    par['cwh'] : float 
+		        Capacity for water holding in snow pack
+		    _rf : float 
+		        Rainfall [mm]
+		    _sf : float 
+		        Snowfall [mm]
+		    intab['wc'] : float 
+		        Water content in previous state [mm]
+		    intab['sp'] : float 
+		        snow pack in previous state [mm]
+
+		    Returns
+		    -------
+		    _in : float 
+		        Infiltration [mm]
+		    intab['wc'] : float 
+		        Water content in posterior state [mm]
+		    _intab['sp'] : float 
+		        Snowpack in posterior state [mm]
+		    '''
+
+		    if intab['temp'] > par['ttm']:
+
+		        if par['cfmax']*(intab['temp']-par['ttm']) < intab['sp']+_sf:
+		            _melt = par['cfmax']*(intab['temp']-par['ttm'])
+		        else:
+		            _melt = intab['sp']+_sf
+
+		        _intab['sp'] = intab['sp'] + _sf - _melt
+		        intab['wc'] = intab['wc'] + _melt + _rf
+
+		        '''
+		        # Since we begin to use hashable object to update wc value, 
+		        	intermedia wc here is no longer necessary.
+				
+		        _wc_int = intab['wc'] + _melt + _rf 	...(1)
+		        intab['wc'] = intab['wc'] + _melt + _rf 	...(2)
+				
+				(1) and (2) are equivalent here.
+		        Modifications like this one will be applied to the whole codage.
+		        '''
+
+		    else:
+		        if par['cfr']*par['cfmax']*(par['ttm']-intab['temp']) < intab['wc']:
+		            _refr = par['cfr']*par['cfmax']*(par['ttm'] - intab['temp'])
+		        else:
+		            _refr = intab['wc'] + _rf
+
+		        _intab['sp'] = intab['sp'] + _sf + _refr
+		        intab['wc'] = intab['wc'] - _refr + _rf
+
+		    if intab['wc'] > par['cwh']*_intab['sp']:
+		        _in = intab['wc']-par['cwh']*_intab['sp']
+		        intab['wc'] = par['cwh']*_intab['sp']
+		    else:
+		        _in = 0.0
+
+		    # return _soil at line 265
+
+		    # Soil routine HBV96
+			def _soil():
+			    '''
+			    ====
+			    Soil
+			    ====
+			    
+			    Soil routine of the HBV-96 model.
+			    
+			    The model checks for the amount of water that can infiltrate the soil, 
+			    coming from the liquid precipitation and the snow pack melting. A part of 
+			    the water will be stored as soil moisture, while other will become runoff, 
+			    and routed to the upper zone tank.
+
+			    Parameters
+			    ----------
+			    par['fc'] : float 
+			        Filed capacity
+			    par['beta'] : float 
+			        Shape coefficient for effective precipitation separation
+			    par['etf'] : float 
+			        Total potential evapotranspiration
+			    intab['temp'] : float 
+			        Temperature
+			    intab['tm'] : float 
+			        Average long term temperature
+			    par['e_corr'] : float 
+			        Evapotranspiration corrector factor
+			    par['lp'] : float _soil 
+			        wilting point
+			    par['tfac'] : float 
+			        Time conversion factor
+			    par['c_flux'] : float 
+			        Capilar flux in the root zone
+			    _in : float 
+			        actual infiltration
+			    intab['ep'] : float 
+			        actual evapotranspiration
+			    intab['sm'] : float 
+			        Previous soil moisture value
+			    intab['uz'] : float 
+			        Previous Upper zone value
+
+			    Returns
+			    -------
+			    intab['sm'] : float 
+			        New value of soil moisture
+			    intab['uz'] : float 
+			        New value of direct runoff into upper zone
+			    '''
+
+			    qdr = max(intab['sm'] + inf - par['fc'], 0)
+			    _in = inf - qdr
+			    _r = ((intab['sm']/par['fc'])**par['beta']) * _in
+			    _ep_int = (1.0 + par['etf']*(intab['temp'] - intab['tm']))*par['e_corr']*intab['ep']
+			    _ea = max(_ep_int, (intab['sm']/(par['lp']*par['fc']))*_ep_int)
+
+			    _cf = par['c_flux']*((par['fc'] - intab['sm'])/par['fc'])
+			    intab['sm'] = max(intab['sm'] + _in - _r + _cf - _ea, 0)
+			    intab['uz'] = intab['uz'] + _r - _cf
+
+			    # return _response at line 264
+
+			    # Response routine HBV96
+				def _response():
+				    '''
+				    ========
+				    Response
+				    ========
+				    The response routine of the HBV-96 model.
+				    
+				    The response routine is in charge of transforming the current values of 
+				    upper and lower zone into discharge. This routine also controls the 
+				    recharge of the lower zone tank (baseflow). The transformation of units 
+				    also occurs in this point.
+				    
+				    Parameters
+				    ----------
+				    par['tfac'] : float
+				        Number of hours in the time step
+				    par['perc'] : float
+				        Percolation value [mm\hr]
+				    par['alpha'] : float
+				        Response box parameter
+				    par['k'] : float
+				        Upper zone recession coefficient
+				    par['k1'] : float 
+				        Lower zone recession coefficient
+				    par['area'] : float
+				        Catchment par['area'] [Km2]
+				    intab['lz'] : float 
+				        Previous lower zone value [mm]
+				    intab['uz'] : float 
+				        Previous upper zone value before percolation [mm]
+				    qdr : float
+				        Direct runoff [mm]
+				    
+				    '''    
+				    intab['lz'] = intab['lz'] + np.min(par['perc'], intab['uz'])
+				    intab['uz'] = np.max(intab['uz'] - par['perc'], 0.0)
+
+				    _q_0 = par['k']*(intab['uz']**(1.0 + par['alpha']))
+				    _q_1 = par['k1']*intab['lz']
+
+				    intab['uz'] = max(intab['uz'] - (_q_0), 0)
+				    intab['lz'] = max(intab['lz'] - (_q_1), 0)
+
+				    intab['q_new'] = par['area']*(_q_0 + _q_1 + qdr)/(3.6*par['tfac'])
+
+				    # return _routing at line 263
+
+				    # Routing routine HBV96
+					def _routing():
+					    """
+					    To be implemented
+					    """	
+					    return
+					return _routing
+		    	return _response
+		    return _soil
+	    return _snow
 
 
-	def _snow(par, intab):
-	    '''
-	    ====
-	    Snow
-	    ====
-	    
-	    Snow routine of the HBV-96 model.
-	    
-	    The snow pack consists of two states: Water Content (wc) and Snow Pack 
-	    (sp). The first corresponds to the liquid part of the water in the snow,
-	    while the latter corresponds to the solid part. If the temperature is 
-	    higher than the melting point, the snow pack will melt and the solid snow
-	    will become liquid. In the opposite case, the liquid part of the snow will
-	    refreeze, and turn into solid. The water that cannot be stored by the solid
-	    part of the snow pack will drain into the soil as part of infiltration.
-
-	    Parameters
-	    ----------
-	    par['cfmax'] : float 
-	        Day degree factor
-	    par['tfac'] : float
-	        Temperature correction factor
-	    intab['temp'] : float 
-	        Temperature [C]
-	    par['ttm'] : float 
-	        Temperature treshold for Melting [C]
-	    par['cfr'] : float 
-	        Refreezing factor
-	    par['cwh'] : float 
-	        Capacity for water holding in snow pack
-	    _rf : float 
-	        Rainfall [mm]
-	    _sf : float 
-	        Snowfall [mm]
-	    intab['wc'] : float 
-	        Water content in previous state [mm]
-	    intab['sp'] : float 
-	        snow pack in previous state [mm]
-
-	    Returns
-	    -------
-	    _in : float 
-	        Infiltration [mm]
-	    _wc_new : float 
-	        Water content in posterior state [mm]
-	    _intab['sp'] : float 
-	        Snowpack in posterior state [mm]
-	    '''
-
-	    if intab['temp'] > par['ttm']:
-
-	        if par['cfmax']*(intab['temp']-par['ttm']) < intab['sp']+_sf:
-	            _melt = par['cfmax']*(intab['temp']-par['ttm'])
-	        else:
-	            _melt = intab['sp']+_sf
-
-	        _intab['sp'] = intab['sp'] + _sf - _melt
-	        _wc_int = intab['wc'] + _melt + _rf
-
-	    else:
-	        if par['cfr']*par['cfmax']*(par['ttm']-intab['temp']) < intab['wc']:
-	            _refr = par['cfr']*par['cfmax']*(par['ttm'] - intab['temp'])
-	        else:
-	            _refr = intab['wc'] + _rf
-
-	        _intab['sp'] = intab['sp'] + _sf + _refr
-	        _wc_int = intab['wc'] - _refr + _rf
-
-	    if _wc_int > par['cwh']*_intab['sp']:
-	        _in = _wc_int-par['cwh']*_intab['sp']
-	        _wc_new = par['cwh']*_intab['sp']
-	    else:
-	        _in = 0.0
-	        _wc_new = _wc_int
-
-	    return _in, _wc_new, _intab['sp']
-
-	
-	def _soil(par, intab):
-	    '''
-	    ====
-	    Soil
-	    ====
-	    
-	    Soil routine of the HBV-96 model.
-	    
-	    The model checks for the amount of water that can infiltrate the soil, 
-	    coming from the liquid precipitation and the snow pack melting. A part of 
-	    the water will be stored as soil moisture, while other will become runoff, 
-	    and routed to the upper zone tank.
-
-	    Parameters
-	    ----------
-	    par['fc'] : float 
-	        Filed capacity
-	    par['beta'] : float 
-	        Shape coefficient for effective precipitation separation
-	    par['etf'] : float 
-	        Total potential evapotranspiration
-	    intab['temp'] : float 
-	        Temperature
-	    intab['tm'] : float 
-	        Average long term temperature
-	    par['e_corr'] : float 
-	        Evapotranspiration corrector factor
-	    par['lp'] : float _soil 
-	        wilting point
-	    par['tfac'] : float 
-	        Time conversion factor
-	    par['c_flux'] : float 
-	        Capilar flux in the root zone
-	    _in : float 
-	        actual infiltration
-	    intab['ep'] : float 
-	        actual evapotranspiration
-	    intab['sm'] : float 
-	        Previous soil moisture value
-	    intab['uz'] : float 
-	        Previous Upper zone value
-
-	    Returns
-	    -------
-	    intab['sm'] : float 
-	        New value of soil moisture
-	    intab['uz'] : float 
-	        New value of direct runoff into upper zone
-	    '''
-
-	    qdr = max(intab['sm'] + inf - par['fc'], 0)
-	    _in = inf - qdr
-	    _r = ((intab['sm']/par['fc'])**par['beta']) * _in
-	    _ep_int = (1.0 + par['etf']*(intab['temp'] - intab['tm']))*par['e_corr']*intab['ep']
-	    _ea = max(_ep_int, (intab['sm']/(par['lp']*par['fc']))*_ep_int)
-
-	    _cf = par['c_flux']*((par['fc'] - intab['sm'])/par['fc'])
-	    intab['sm'] = max(intab['sm'] + _in - _r + _cf - _ea, 0)
-	    intab['uz'] = intab['uz'] + _r - _cf
-
-	    return intab['sm'], intab['uz'], qdr
-
-
-	def _response(par, intab):
-	    '''
-	    ========
-	    Response
-	    ========
-	    The response routine of the HBV-96 model.
-	    
-	    The response routine is in charge of transforming the current values of 
-	    upper and lower zone into discharge. This routine also controls the 
-	    recharge of the lower zone tank (baseflow). The transformation of units 
-	    also occurs in this point.
-	    
-	    Parameters
-	    ----------
-	    par['tfac'] : float
-	        Number of hours in the time step
-	    par['perc'] : float
-	        Percolation value [mm\hr]
-	    par['alpha'] : float
-	        Response box parameter
-	    par['k'] : float
-	        Upper zone recession coefficient
-	    par['k1'] : float 
-	        Lower zone recession coefficient
-	    par['area'] : float
-	        Catchment par['area'] [Km2]
-	    intab['lz'] : float 
-	        Previous lower zone value [mm]
-	    intab['uz'] : float 
-	        Previous upper zone value before percolation [mm]
-	    qdr : float
-	        Direct runoff [mm]
-	    
-	    '''    
-	    intab['lz'] = intab['lz'] + np.min(par['perc'], intab['uz'])
-	    intab['uz'] = np.max(intab['uz'] - par['perc'], 0.0)
-
-	    _q_0 = par['k']*(intab['uz']**(1.0 + par['alpha']))
-	    _q_1 = par['k1']*intab['lz']
-
-	    intab['uz'] = max(intab['uz'] - (_q_0), 0)
-	    intab['lz'] = max(intab['lz'] - (_q_1), 0)
-
-	    q_new = par['area']*(_q_0 + _q_1 + qdr)/(3.6*par['tfac'])
-
-	    return q_new, intab['uz'], intab['lz']
-
-
-	def _routing():
-	    """
-	    To be implemented
-	    """
-	    return
-
-
-	def _step_run(par, intab):
+	def step_run(par, intab):
 	    '''
 	    ========
 	    Step run
@@ -285,52 +300,10 @@ class RoutineProcess(object):
 	    St : array_like [5]
 	        Posterior model states
 	    '''
-	    ## Parse of parameters from input vector to model
-	    # par['ltt'] = p[0]
-	    # par['utt'] = p[1]
-	    # par['ttm'] = p[2]
-	    # par['cfmax'] = p[3]
-	    # par['fc'] = p[4]
-	    # par['e_corr'] = p[5]
-	    # par['etf'] = p[6]
-	    # par['lp'] = p[7]
-	    # par['k'] = p[8]
-	    # par['k1'] = p[9]
-	    # par['alpha'] = p[10]
-	    # par['beta'] = p[11]
-	    # par['cwh'] = p[12]
-	    # par['cfr'] = p[13]
-	    # par['c_flux'] = p[14]
-	    # par['perc'] = p[15]
-	    # par['rfcf'] = p[16]
-	    # par['sfcf'] = p[17]
 
-	    # ## Non optimisable parameters
-	    # par['tfac'] = p2[0]
-	    # par['area'] = p2[1]
+	    # Call the nested 5 routines, output will be updated input hashtables
+	    _precipitation()()()()()
 
-	    # ## Parse of Inputs
-	    # intab['avg_prec'] = v[0] # Precipitation [mm]
-	    # intab['temp'] = v[1] # Temperature [C]
-	    # intab['ep'] = v[2] # Long terms (monthly) Evapotranspiration [mm]
-	    # intab['tm'] = v[3] #Long term (monthly) average temperature [C]
-
-	    # ## Parse of states
-	    # intab['sp'] = St[0]
-	    # intab['sm'] = St[1]
-	    # intab['uz'] = St[2]
-	    # intab['lz'] = St[3]
-	    # intab['wc'] = St[4]
-
-	    rf, sf = _precipitation(par, intab)
-	    
-	    inf, intab['wc'], intab['sp'] = _snow(par, intab)
-	    
-	    intab['sm'], intab['uz'], qdr = _soil(par, intab)
-	    
-	    q_new, intab['uz'], intab['lz'] = _response(par, intab)
-
-	    return intab
 
 
 	def simulate(intab['avg_prec'], intab['temp'], et, par, p2, init_st=DEF_ST, ll_temp=None, 
