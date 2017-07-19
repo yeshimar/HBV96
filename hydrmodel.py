@@ -3,7 +3,7 @@
 # HBV-96 model class
 
 
-class HBV96(object):
+class HydroModel(object):
 	"""docstring for HBV96"""
 
 	"""Public Static Variables"""
@@ -89,40 +89,33 @@ class HBV96(object):
 
 	# HBV96 model initializer, only Mparameter enough?
 	def __init__(self):
-		self._par = dict(zip(self._ind, len(self._ind)*[0.0]))
+		self._par = dict()
+		self._config = dict()
 
 	@property
 	def par(self):
 		return self._par
+	def configs(self):
+		return self._config
+	def data(self):
+		return DataFrame.from_dict(self._data)
 
 	# Render parameter function
-	def render_par(self, obj_name, par_name):
+	def _render_par(self, obj_name, par_name):
 		return	eval('self.'+obj_name+'[par_name]')
 
 	# Set parameter function, external accessibility for Django
-	def set_par(self, obj_name, par_name, value):
+	def _set_par(self, obj_name, par_name, value):
 		exec('self.'+obj_name+'[par_name] = value')
 
-# Test how private statement works in nested functions
-x = {'a':1, 'b':2}
-def wraper(x):
-	x['c'] = 3
-	_bc = x['b']*x['c']
-	def _body():
-		x['d'] = 4
-		x['bcd'] = _bc*x['d']
-		def _guts():
-			x['e'] = 5
-			x['bce'] = _bc*x['e']
-			return x
-		return _guts
-	return _body
+	# Extract data from csv file uploaded
+	def _data_extractor(self):
+		self._df = pd.DataFrame.from_csv(self._config['file_path'])
 
-'''
-Test result is all a big BRAVOS !
-In [8]: wr = wraper(x)
+	# Data checker/validator
+	def _data_checker(self):
+		pass
 
-In [9]: wr()()
-Out[9]: {'a': 1, 'b': 2, 'bcd': 24, 'bce': 30, 'c': 3, 'd': 4, 'e': 5}
-
-'''
+	# Model configurator
+	def _configurate_model(self):
+		pass

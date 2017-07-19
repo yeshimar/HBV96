@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 # HBV-96 model RoutinesClass
 
-class RoutineProcess(object):
+class HBV96(HydroModel):
 	"""docstring for RoutineProcess"""
 
 	""""""
 	
 	# Precipitation routine HBV96
-	def _precipitation():
+	def _precipitation(self):
 	    '''
 	    ==============
 	    Precipitation
@@ -16,24 +16,24 @@ class RoutineProcess(object):
 
 	    Precipitaiton routine of the HBV96 model.
 
-	    If temperature is lower than par['ltt'], all the precipitation is considered as
-	    snow. If the temperature is higher than par['utt'], all the precipitation is
-	    considered as rainfall. In case that the temperature is between par['ltt'] and
-	    par['utt'], precipitation is a linear mix of rainfall and snowfall.
+	    If temperature is lower than self._par['ltt'], all the precipitation is considered as
+	    snow. If the temperature is higher than self._par['utt'], all the precipitation is
+	    considered as rainfall. In case that the temperature is between self._par['ltt'] and
+	    self._par['utt'], precipitation is a linear mix of rainfall and snowfall.
 
 	    Parameters
 	    ----------
 	    intab['temp'] : float
 	        Measured temperature [C]
-	    par['ltt'] : float
+	    self._par['ltt'] : float
 	        Lower temperature treshold [C]
-	    par['utt'] : float
+	    self._par['utt'] : float
 	        Upper temperature treshold [C]
 	    prec : float 
 	        Precipitation [mm]
-	    par['rfcf'] : float
+	    self._par['rfcf'] : float
 	        Rainfall corrector factor
-	    par['sfcf'] : float
+	    self._par['sfcf'] : float
 	        Snowfall corrector factor
 
 	    Returns
@@ -44,22 +44,22 @@ class RoutineProcess(object):
 	        Snowfall [mm]
 	    '''
 
-	    if intab['temp'] <= par['ltt']:
+	    if intab['temp'] <= self._par['ltt']:
 	        _rf = 0.0
-	        _sf = prec*par['sfcf']
+	        _sf = prec*self._par['sfcf']
 
-	    elif intab['temp'] >= par['utt']:
-	        _rf = prec*par['rfcf']
+	    elif intab['temp'] >= self._par['utt']:
+	        _rf = prec*self._par['rfcf']
 	        _sf = 0.0
 
 	    else:
-	        _rf = ((intab['temp']-par['ltt'])/(par['utt']-par['ltt'])) * prec * par['rfcf']
-	        _sf = (1.0-((intab['temp']-par['ltt'])/(par['utt']-par['ltt']))) * prec * par['sfcf']
+	        _rf = ((intab['temp']-self._par['ltt'])/(self._par['utt']-self._par['ltt'])) * prec * self._par['rfcf']
+	        _sf = (1.0-((intab['temp']-self._par['ltt'])/(self._par['utt']-self._par['ltt']))) * prec * self._par['sfcf']
 
 	    # return _snow at line 266
 		
 		# Snow routine HBV96	        
-		def _snow():
+		def _snow(self):
 		    '''
 		    ====
 		    Snow
@@ -77,17 +77,17 @@ class RoutineProcess(object):
 
 		    Parameters
 		    ----------
-		    par['cfmax'] : float 
+		    self._par['cfmax'] : float 
 		        Day degree factor
-		    par['tfac'] : float
+		    self._par['tfac'] : float
 		        Temperature correction factor
 		    intab['temp'] : float 
 		        Temperature [C]
-		    par['ttm'] : float 
+		    self._par['ttm'] : float 
 		        Temperature treshold for Melting [C]
-		    par['cfr'] : float 
+		    self._par['cfr'] : float 
 		        Refreezing factor
-		    par['cwh'] : float 
+		    self._par['cwh'] : float 
 		        Capacity for water holding in snow pack
 		    _rf : float 
 		        Rainfall [mm]
@@ -108,15 +108,15 @@ class RoutineProcess(object):
 		        Snowpack in posterior state [mm]
 		    '''
 
-		    if intab['temp'] > par['ttm']:
+		    if intab['temp'] > self._par['ttm']:
 
-		        if par['cfmax']*(intab['temp']-par['ttm']) < intab['sp']+_sf:
-		            _melt = par['cfmax']*(intab['temp']-par['ttm'])
+		        if self._par['cfmax']*(intab['temp']-self._par['ttm']) < intab['sp']+_sf:
+		            _melt = self._par['cfmax']*(intab['temp']-self._par['ttm'])
 		        else:
 		            _melt = intab['sp']+_sf
 
-		        _intab['sp'] = intab['sp'] + _sf - _melt
-		        intab['wc'] = intab['wc'] + _melt + _rf
+		        outab['sp'] = intab['sp'] + _sf - _melt
+		        outab['wc'] = intab['wc'] + _melt + _rf
 
 		        '''
 		        # Since we begin to use hashable object to update wc value, 
@@ -130,24 +130,24 @@ class RoutineProcess(object):
 		        '''
 
 		    else:
-		        if par['cfr']*par['cfmax']*(par['ttm']-intab['temp']) < intab['wc']:
-		            _refr = par['cfr']*par['cfmax']*(par['ttm'] - intab['temp'])
+		        if self._par['cfr']*self._par['cfmax']*(self._par['ttm']-intab['temp']) < intab['wc']:
+		            _refr = self._par['cfr']*self._par['cfmax']*(self._par['ttm'] - intab['temp'])
 		        else:
 		            _refr = intab['wc'] + _rf
 
-		        _intab['sp'] = intab['sp'] + _sf + _refr
-		        intab['wc'] = intab['wc'] - _refr + _rf
+		        outab['sp'] = intab['sp'] + _sf + _refr
+		        outab['wc'] = intab['wc'] - _refr + _rf
 
-		    if intab['wc'] > par['cwh']*_intab['sp']:
-		        _in = intab['wc']-par['cwh']*_intab['sp']
-		        intab['wc'] = par['cwh']*_intab['sp']
+		    if intab['wc'] > self._par['cwh']*intab['sp']:
+		        _in = outab['wc']-self._par['cwh']*intab['sp']
+		        outab['wc'] = self._par['cwh']*intab['sp']
 		    else:
 		        _in = 0.0
 
 		    # return _soil at line 265
 
 		    # Soil routine HBV96
-			def _soil():
+			def _soil(self):
 			    '''
 			    ====
 			    Soil
@@ -162,23 +162,23 @@ class RoutineProcess(object):
 
 			    Parameters
 			    ----------
-			    par['fc'] : float 
+			    self._par['fc'] : float 
 			        Filed capacity
-			    par['beta'] : float 
+			    self._par['beta'] : float 
 			        Shape coefficient for effective precipitation separation
-			    par['etf'] : float 
+			    self._par['etf'] : float 
 			        Total potential evapotranspiration
 			    intab['temp'] : float 
 			        Temperature
 			    intab['tm'] : float 
 			        Average long term temperature
-			    par['e_corr'] : float 
+			    self._par['e_corr'] : float 
 			        Evapotranspiration corrector factor
-			    par['lp'] : float _soil 
+			    self._par['lp'] : float _soil 
 			        wilting point
-			    par['tfac'] : float 
+			    self._par['tfac'] : float 
 			        Time conversion factor
-			    par['c_flux'] : float 
+			    self._par['c_flux'] : float 
 			        Capilar flux in the root zone
 			    _in : float 
 			        actual infiltration
@@ -197,20 +197,20 @@ class RoutineProcess(object):
 			        New value of direct runoff into upper zone
 			    '''
 
-			    qdr = max(intab['sm'] + inf - par['fc'], 0)
+			    qdr = max(intab['sm'] + inf - self._par['fc'], 0)
 			    _in = inf - qdr
-			    _r = ((intab['sm']/par['fc'])**par['beta']) * _in
-			    _ep_int = (1.0 + par['etf']*(intab['temp'] - intab['tm']))*par['e_corr']*intab['ep']
-			    _ea = max(_ep_int, (intab['sm']/(par['lp']*par['fc']))*_ep_int)
+			    _r = ((intab['sm']/self._par['fc'])**self._par['beta']) * _in
+			    _ep_int = (1.0 + self._par['etf']*(intab['temp'] - intab['tm']))*self._par['e_corr']*intab['ep']
+			    _ea = max(_ep_int, (intab['sm']/(self._par['lp']*self._par['fc']))*_ep_int)
 
-			    _cf = par['c_flux']*((par['fc'] - intab['sm'])/par['fc'])
-			    intab['sm'] = max(intab['sm'] + _in - _r + _cf - _ea, 0)
-			    intab['uz'] = intab['uz'] + _r - _cf
+			    _cf = self._par['c_flux']*((self._par['fc'] - intab['sm'])/self._par['fc'])
+			    outab['sm'] = max(intab['sm'] + _in - _r + _cf - _ea, 0)
+			    outab['uz'] = intab['uz'] + _r - _cf
 
 			    # return _response at line 264
 
 			    # Response routine HBV96
-				def _response():
+				def _response(self):
 				    '''
 				    ========
 				    Response
@@ -224,18 +224,18 @@ class RoutineProcess(object):
 				    
 				    Parameters
 				    ----------
-				    par['tfac'] : float
+				    self._par['tfac'] : float
 				        Number of hours in the time step
-				    par['perc'] : float
+				    self._par['perc'] : float
 				        Percolation value [mm\hr]
-				    par['alpha'] : float
+				    self._par['alpha'] : float
 				        Response box parameter
-				    par['k'] : float
+				    self._par['k'] : float
 				        Upper zone recession coefficient
-				    par['k1'] : float 
+				    self._par['k1'] : float 
 				        Lower zone recession coefficient
-				    par['area'] : float
-				        Catchment par['area'] [Km2]
+				    self._par['area'] : float
+				        Catchment self._par['area'] [Km2]
 				    intab['lz'] : float 
 				        Previous lower zone value [mm]
 				    intab['uz'] : float 
@@ -244,21 +244,21 @@ class RoutineProcess(object):
 				        Direct runoff [mm]
 				    
 				    '''    
-				    intab['lz'] = intab['lz'] + np.min(par['perc'], intab['uz'])
-				    intab['uz'] = np.max(intab['uz'] - par['perc'], 0.0)
+				    outab['lz'] = intab['lz'] + np.min(self._par['perc'], outab['uz'])
+				    outab['uz'] = np.max(outab['uz'] - self._par['perc'], 0.0)
 
-				    _q_0 = par['k']*(intab['uz']**(1.0 + par['alpha']))
-				    _q_1 = par['k1']*intab['lz']
+				    _q_0 = self._par['k']*(outab['uz']**(1.0 + self._par['alpha']))
+				    _q_1 = self._par['k1']*outab['lz']
 
-				    intab['uz'] = max(intab['uz'] - (_q_0), 0)
-				    intab['lz'] = max(intab['lz'] - (_q_1), 0)
+				    outab['uz'] = max(outab['uz'] - (_q_0), 0)
+				    outab['lz'] = max(outab['lz'] - (_q_1), 0)
 
-				    intab['q_new'] = par['area']*(_q_0 + _q_1 + qdr)/(3.6*par['tfac'])
+				    outab['q_new'] = self._par['area']*(_q_0 + _q_1 + qdr)/(3.6*self._par['tfac'])
 
 				    # return _routing at line 263
 
 				    # Routing routine HBV96
-					def _routing():
+					def _routing(self):
 					    """
 					    To be implemented
 					    """	
@@ -269,7 +269,7 @@ class RoutineProcess(object):
 	    return _snow
 
 
-	def step_run(par, intab):
+	def _step_run(self, intab, outab):
 	    '''
 	    ========
 	    Step run
@@ -281,11 +281,11 @@ class RoutineProcess(object):
 	    ----------
 	    p : array_like [18]
 	        Parameter vector, set up as:
-	        [par['ltt'], par['utt'], par['ttm'], par['cfmax'], par['fc'], ecorr, par['etf'], par['lp'], par['k'], par['k1'], 
-	        par['alpha'], par['beta'], par['cwh'], par['cfr'], par['c_flux'], par['perc'], par['rfcf'], par['sfcf']]
+	        [self._par['ltt'], self._par['utt'], self._par['ttm'], self._par['cfmax'], self._par['fc'], ecorr, self._par['etf'], self._par['lp'], self._par['k'], self._par['k1'], 
+	        self._par['alpha'], self._par['beta'], self._par['cwh'], self._par['cfr'], self._par['c_flux'], self._par['perc'], self._par['rfcf'], self._par['sfcf']]
 	    p2 : array_like [2]
 	        Problem parameter vector setup as:
-	        [par['tfac'], par['area']]
+	        [self._par['tfac'], self._par['area']]
 	    v : array_like [4]
 	        Input vector setup as:
 	        [prec, intab['temp'], evap, llt]
@@ -303,67 +303,6 @@ class RoutineProcess(object):
 
 	    # Call the nested 5 routines, output will be updated input hashtables
 	    _precipitation()()()()()
-
-
-
-	def simulate(intab['avg_prec'], intab['temp'], et, par, p2, init_st=DEF_ST, ll_temp=None, 
-	             q_0=DEF_q0):
-	    '''
-	    ========
-	    Simulate
-	    ========
-
-	    Run the HBV model for the number of steps (n) in precipitation. The
-	    resluts are (n+1) simulation of discharge as the model calculates step n+1
-		
-	    
-	    Parameters
-	    ----------
-	    intab['avg_prec'] : array_like [n]
-	        Average precipitation [mm/h]
-	    intab['temp'] : array_like [n]
-	        Average temperature [C]
-	    et : array_like [n]
-	        Potential Evapotranspiration [mm/h]
-	    par : array_like [18]
-	        Parameter vector, set up as:
-	        [par['ltt'], par['utt'], par['ttm'], par['cfmax'], par['fc'], ecorr, par['etf'], par['lp'], par['k'], par['k1'], 
-	        par['alpha'], par['beta'], par['cwh'], par['cfr'], par['c_flux'], par['perc'], par['rfcf'], par['sfcf']]
-	    p2 : array_like [2]
-	        Problem parameter vector setup as:
-	        [par['tfac'], par['area']]
-	    init_st : array_like [5], optional
-	        Initial model states, [sp, sm, uz, lz, wc]. If unspecified, 
-	        [0.0, 30.0, 30.0, 30.0, 0.0] mm
-	    ll_temp : array_like [n], optional
-	        Long term average temptearature. If unspecified, calculated from intab['temp'].
-	    q_0 : float, optional
-	        Initial discharge value. If unspecified set to 10.0
-	    
-
-	    Returns
-	    -------
-	    q_sim : array_like [n]
-	        Discharge for the n time steps of the precipitation vector [m3/s]
-	    st : array_like [n, 5]
-	        Model states for the complete time series [mm]
-	    '''
-
-
-	    st = [init_st, ]
-
-	    if ll_temp is None:
-	        ll_temp = [np.mean(intab['temp']), ] * len(intab['avg_prec'])
-
-	    q_sim = [q_0, ]
-
-	    for i in range(len(intab['avg_prec'])):
-	        v = [intab['avg_prec'][i], intab['temp'][i], et[i], ll_temp[i]]
-	        q_out, st_out = _step_run(par, p2, v, st[i])
-	        q_sim.append(q_out)
-	        st.append(st_out)
-
-	    return q_sim, st
 
 
 	def _nse(q_rec, q_sim):
@@ -422,9 +361,9 @@ class RoutineProcess(object):
 	    f = np.sqrt(np.nanmean(erro))
 	    return f
 
-	def calibrate(flow, intab['avg_prec'], intab['temp'], et, p2, init_st=None, ll_temp=None,
-	              x_0=None, x_lb=P_LB, x_ub=P_UB, obj_fun=_rmse, wu=10,
-	              verbose=False, tol=0.001, minimise=True, fun_nam='RMSE'):
+	def calibrate(x_0=self._config['x_0'], obj_fun=self._config['obj_fun'],
+				wu=self._config['wu'], verbose=self._config['verbose'], 
+	              minimise=self._config['minimise'], fun_nam=self._config['fun_nam']):
 	    '''
 	    =========
 	    Calibrate
@@ -447,7 +386,7 @@ class RoutineProcess(object):
 	        Potential Evapotranspiration [mm/h] 
 	    p2 : array_like [2]
 	        Problem parameter vector setup as:
-	        [par['tfac'], par['area']]
+	        [self._par['tfac'], self._par['area']]
 	    init_st : array_like [5], optional
 	        Initial model states, [sp, sm, uz, lz, wc]. If unspecified, 
 	        [0.0, 30.0, 30.0, 30.0, 0.0] mm
@@ -489,31 +428,50 @@ class RoutineProcess(object):
 	    performance : float
 	        Optimal value of the objective function
 	    '''
-
-	    def _cal_fun(par):
-	        q_sim = simulate(intab['avg_prec'][:-1], intab['temp'], et, par, p2, init_st=None,
-	                         ll_temp=None, q_0=10.0)[0]
-	        if minimise:
-	            perf = obj_fun(flow[wu:], q_sim[wu:])
-	        else:
-	            perf = -obj_fun(flow[wu:], q_sim[wu:])
+	    self._init_simu() # Simulation init was put here in order to save instances in _simulate_with_calibration(self)
+	    
+	    def _cal_fun(self, par_to_optimize):
+	    	self._par.update(dict(zip(_ind[:18], par_to_optimize))) # Update the parameter dictionary
+	        _q_sim, _q_rec = self._simulate_with_calibration()
 
 	        if verbose:
 	            print('{0}: {1}'.format(fun_nam, perf))
-	        return perf
+	        
+	        if minimise:
+	            return obj_fun(_q_rec[wu:], _q_sim[wu:])
+	        else:
+	            return -obj_fun(_q_rec[wu:], _q_sim[wu:])
 
 	    # Boundaries
-	    x_b = zip(x_lb, x_ub)
+	    x_b = zip(self.P_LB, self.P_UB)
 
-	    # initial guess
+	    # Initial guess
 	    if x_0 is None:
 	        # Randomly generated
-	        x_0 = np.random.uniform(x_lb, x_ub)
+	        x_0 = np.random.uniform(self.P_LB, self.P_UB)
 
 	    # Model optimisation
-	    par_cal = opt.minimize(_cal_fun, x_0, method='L-BFGS-B', bounds=x_b,
-	                           tol=tol)
-	    params = par_cal.x
-	    performance = par_cal.fun
-	    return params, performance
+	    par_cal = opt.minimize(self._cal_fun, x_0, method='L-BFGS-B', bounds=x_b,
+	                          tol=self._config['tol'])
+	    self._params = par_cal.x
+	    self._performance = par_cal.fun
 
+	def _simulate_with_calibration(self):
+		_q_sim = [self._data[0]['q_sim'],]
+		_q_rec = [self._data[0]['q_rec'],] # _q_sim and q_rec will only live inside simulation
+		
+		for i in xrange(0, self._config['miles']):
+			self._step_run(self._data[i], self._data[i+1]) # Consider sub-hashtable i as input and (i+1) as output table			
+			_q_sim.append(self._data[i+1]['q_sim'])
+			_q_rec.append(self._data[i+1]['q_rec'])
+		return _q_sim, _q_rec
+
+	def _simulate_without_calibration(self):
+		self._init_simu()
+
+		for i in xrange(0, self._config['miles']):
+			self._step_run(self._data[i], self._data[i+1])
+
+	def _init_simu(self):
+		self._data[0].update(self.DEF_ST)
+		self._data[0].update({'q_sim': self.DEF_q0})
