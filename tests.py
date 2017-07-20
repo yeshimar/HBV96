@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 # This file consists of all tests dedicated to the implentetion of the HBV96 model
 import unittest
+from hbv96 import HBV96
 
 class AboutTests(unittest.TestCase):
 	"""docstring for AboutTests"""
 
 	def test_nested_functions_and_scopes(self):
-	# Test how private statement works in nested functions
+		# Test mutable objects work in nested functions
 		x = {'a':1, 'b':2}
 		def wraper():
 			x['c'] = 3
@@ -31,3 +32,6 @@ class AboutTests(unittest.TestCase):
 
 		'''
 		self.assertEqual(_result, wraper()()())
+
+	def ():
+		pass

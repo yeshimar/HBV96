@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # HBV-96 model class
-
+from __future__ import division, print_function
+import numpy as np
+import scipy.optimize as opt
+import pandas as pd
+from pandas import DataFrame
 
 class HydroModel(object):
 	"""docstring for HBV96"""
@@ -15,7 +19,7 @@ class HydroModel(object):
 			'ttm',
 			'cfmax',
 			'fc',
-			'ecorr',
+			'e_corr',
 			'etf',
     		'lp',
     		'k',
@@ -27,7 +31,7 @@ class HydroModel(object):
     		'c_flux',
     		'perc',
     		'rfcf',
-    		'sfcf'
+    		'sfcf',
     		'tfac', #Non-modifiable, nm of hrs in time step
     		'area'	#Non-modifiable, catchment area
     		]
@@ -87,35 +91,36 @@ class HydroModel(object):
 	# Initial flow rate		
 	DEF_q0 = 10.0
 
-	# HBV96 model initializer, only Mparameter enough?
+	# HBV96 model initializer
 	def __init__(self):
-		self._par = dict()
-		self._config = dict()
-
-	@property
-	def par(self):
-		return self._par
-	def configs(self):
-		return self._config
-	def data(self):
-		return DataFrame.from_dict(self._data)
+		self.par = {}
+		self.config = {}
+		self.data = []
 
 	# Render parameter function
-	def _render_par(self, obj_name, par_name):
+	def render_par(self, obj_name, par_name):
 		return	eval('self.'+obj_name+'[par_name]')
 
 	# Set parameter function, external accessibility for Django
-	def _set_par(self, obj_name, par_name, value):
+	def set_par(self, obj_name, par_name, value):
 		exec('self.'+obj_name+'[par_name] = value')
 
-	# Extract data from csv file uploaded
-	def _data_extractor(self):
-		self._df = pd.DataFrame.from_csv(self._config['file_path'])
+	# Extract data to an array-like dict from csv file uploaded
+	def dictlike_data_extractor(self):
+		self.data = pd.read_csv(self.config['file_path'], 
+								sep=self.config['seperator'],
+								header=self.config['header']).to_dict(orient='records')
+
+	# Extract data to a pandas dataframe from csv file uploaded
+	def dataframe_data_extractor(self):
+		self.data = pd.read_csv(self.config['file_path'], 
+								sep=self.config['seperator'],
+								header=self.config['header'])
 
 	# Data checker/validator
-	def _data_checker(self):
+	def data_checker(self):
 		pass
 
 	# Model configurator
-	def _configurate_model(self):
+	def configurate_model(self):
 		pass
